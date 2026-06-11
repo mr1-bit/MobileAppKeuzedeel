@@ -1,0 +1,225 @@
+import React, { useEffect, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
+
+type RegionEntry = {
+  region: string;
+  startdate: string;
+  enddate: string;
+  days: number;
+};
+
+type Vacation = {
+  type: string;
+  compulsorydates: string;
+  regions: RegionEntry[];
+};
+
+type VacationByRegion = {
+  type: string;
+  region: string;
+  startdate: string;
+  enddate: string;
+};
+
+type Props = {
+  region?: string;
+  /** School year string, e.g. "2025-2026". Defaults to the current school year. */
+  schoolYear?: string;
+};
+
+function defaultSchoolYear(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  if (month >= 8) return `${year}-${year + 1}`;
+  return `${year - 1}-${year}`;
+}
+
+/**
+ * Parse a "YYYY-MM-DD" string as LOCAL midnight.
+ * The API returns dates as UTC (e.g. "2026-07-11" = 00:00 UTC = 02:00 NL),
+ * which would cause Math.ceil to be off by 1 day. Parsing as local midnight
+ * keeps day arithmetic consistent with what the user sees on their clock.
+ */
+function parseLocalDate(dateStr: string): Date {
+  // The API sometimes returns "YYYY-MM-DDT00:00:00" — take only the date part.
+  const datePart = dateStr.slice(0, 10); // "YYYY-MM-DD"
+  const [y, m, d] = datePart.split("-").map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0);
+}
+
+async function getVacationsByRegion(
+  regions: string[],
+  schoolYear: string,
+): Promise<VacationByRegion[]> {
+  const url =
+    `https://opendata.rijksoverheid.nl/v1/infotypes/schoolholidays/schoolyear/${schoolYear}?output=json`;
+  const response = await fetch(url);
+  const data = await response.json();
+  const vacations: Vacation[] = data.content[0].vacations;
+
+  return vacations.flatMap((vacation) =>
+    vacation.regions
+      .filter((r) =>
+        regions.includes(r.region) || r.region === "heel Nederland"
+      )
+      .map((r) => ({
+        type: vacation.type.trim(),
+        region: r.region,
+        startdate: r.startdate,
+        enddate: r.enddate,
+      }))
+  );
+}
+
+export default function VacationList({
+  region = "noord",
+  schoolYear,
+}: Props) {
+  const [vacations, setVacations] = useState<VacationByRegion[]>([]);
+  const resolvedYear = schoolYear ?? defaultSchoolYear();
+
+  useEffect(() => {
+    setVacations([]); // clear while fetching new year
+    getVacationsByRegion([region, "heel Nederland"], resolvedYear).then(
+      setVacations,
+    );
+  }, [region, resolvedYear]);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Use parseLocalDate so isPast and daysUntil are both anchored to local midnight,
+  // matching the Countdown screen's Math.ceil(ms / 86400000) logic.
+  const isPast = (enddate: string) => parseLocalDate(enddate) < today;
+
+  const getDaysUntil = (target: Date) =>
+    Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  const getDaysAgo = (enddate: string) =>
+    Math.ceil(
+      (today.getTime() - parseLocalDate(enddate).getTime()) /
+        (1000 * 60 * 60 * 24),
+    );
+
+  const sorted = [...vacations].sort((a, b) => {
+    const aPast = isPast(a.enddate);
+    const bPast = isPast(b.enddate);
+    if (aPast !== bPast) return aPast ? 1 : -1;
+    return (
+      parseLocalDate(a.startdate).getTime() -
+      parseLocalDate(b.startdate).getTime()
+    );
+  });
+
+  const upcoming = sorted.filter((v) => !isPast(v.enddate));
+  const past = sorted.filter((v) => isPast(v.enddate));
+
+  const renderCard = (item: VacationByRegion, i: number) => {
+    const isItemPast = isPast(item.enddate);
+    const startLocal = parseLocalDate(item.startdate);
+    const endLocal = parseLocalDate(item.enddate);
+    return (
+      <View key={i} style={[styles.kaart, isItemPast && styles.kaartVoorbij]}>
+        <View
+          style={[styles.stip, {
+            backgroundColor: isItemPast ? "#BBB" : "#F59E0B",
+          }]}
+        />
+        <View style={styles.kaartInfo}>
+          <Text
+            style={[styles.kaartNaam, isItemPast && styles.kaartNaamVoorbij]}
+          >
+            {item.type}
+          </Text>
+          <Text
+            style={[
+              styles.kaartDatums,
+              isItemPast && styles.kaartDatumsVoorbij,
+            ]}
+          >
+            {startLocal.toLocaleDateString("nl-NL")} –{" "}
+            {endLocal.toLocaleDateString("nl-NL")}
+          </Text>
+          <View
+            style={[
+              styles.dagenBadge,
+              { backgroundColor: isItemPast ? "#E5E7EB" : "#F59E0B" },
+            ]}
+          >
+            <Text
+              style={[styles.dagenTekst, {
+                color: isItemPast ? "#9CA3AF" : "#DCFCE7",
+              }]}
+            >
+              {isItemPast
+                ? `${getDaysAgo(item.enddate)} dagen geleden`
+                : `${getDaysUntil(startLocal)} dagen`}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      {upcoming.length === 0 && past.length === 0 && (
+        <Text style={styles.emptyText}>Geen vakanties gevonden.</Text>
+      )}
+      {upcoming.map((item, i) => renderCard(item, i))}
+      {past.length > 0 && (
+        <>
+          <Text style={styles.sectieLabel}>VOORBIJ</Text>
+          {past.map((item, i) => renderCard(item, i + upcoming.length))}
+        </>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 16 },
+  emptyText: {
+    textAlign: "center",
+    color: "#AAA",
+    marginTop: 24,
+    fontSize: 14,
+  },
+  sectieLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#AAA",
+    letterSpacing: 1,
+    paddingHorizontal: 4,
+    paddingTop: 12,
+    paddingBottom: 10,
+  },
+  kaart: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 0.5,
+    borderColor: "#E2E5F0",
+    gap: 12,
+    marginBottom: 8,
+  },
+  kaartVoorbij: { opacity: 0.45 },
+  stip: { width: 11, height: 11, borderRadius: 6, flexShrink: 0 },
+  kaartInfo: { flex: 1 },
+  kaartNaam: { fontSize: 15, fontWeight: "600", color: "#1A1A2E" },
+  kaartNaamVoorbij: { color: "#888" },
+  kaartDatums: { fontSize: 12, color: "#999", marginTop: 2 },
+  kaartDatumsVoorbij: { color: "#BBB" },
+  dagenBadge: {
+    alignSelf: "flex-start",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 6,
+  },
+  dagenTekst: { fontSize: 12, fontWeight: "700" },
+});

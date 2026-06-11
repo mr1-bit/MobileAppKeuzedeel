@@ -129,7 +129,7 @@ function formatDate(date: Date): string {
   } ${date.getFullYear()}`;
 }
 
-/** ms remaining until the start of `target` (clamped to 0) */
+
 function msUntil(target: Date): number {
   return Math.max(0, target.getTime() - Date.now());
 }

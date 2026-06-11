@@ -77,6 +77,7 @@ const darkColors = {
   stipPast: "#555558",
   emptyText: "#636366",
 };
+
 const lightColors = {
   card: "#FFFFFF",
   cardBorder: "#E2E5F0",

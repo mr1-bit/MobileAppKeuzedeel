@@ -3,7 +3,6 @@ import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import React from "react";
 import * as Device from "expo-device";
 import * as Location from "expo-location";
-// import MapView, { Marker, Region } from "react-native-maps";
 import Vacation from "./GetVacations.tsx";
 
 const PROVINCE_TO_REGION: Record<string, string> = {

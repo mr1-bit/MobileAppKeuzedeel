@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Platform,
   SafeAreaView,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Switch,
@@ -15,6 +16,8 @@ import * as Device from "expo-device";
 import * as Location from "expo-location";
 import { Regio, useAppContext } from "../Appcontext.tsx";
 import BottomNavBar from "../components/BottomNavbar.tsx";
+import SideNavBar from "../components/SideNavbar.tsx";
+import { useOrientation } from "../orientation.ts";
 import { MapPin } from "lucide-react-native";
 
 const PROVINCE_TO_REGION: Record<string, Regio> = {
@@ -60,11 +63,18 @@ function buildSchoolYearOptions(): string[] {
   const now = new Date();
   const year = now.getFullYear();
   const options: string[] = [];
-
-  for (let y = year - 2; y <= year + 2; y++) {
+  for (let y = year - 1; y <= year + 1; y++) {
     options.push(`${y}-${y + 1}`);
   }
   return options;
+}
+
+function buildCurrentSchoolYear(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  if (month >= 8) return `${year}-${year + 1}`;
+  return `${year - 1}-${year}`;
 }
 
 const SCHOOL_YEAR_OPTIONS = buildSchoolYearOptions();
@@ -85,6 +95,8 @@ export default function InstellingenScreen() {
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const colors = darkMode ? darkColors : lightColors;
+  const orientation = useOrientation();
+  const isLandscape = orientation === "landscape";
 
   const handleGps = async () => {
     setGpsLoading(true);
@@ -106,6 +118,197 @@ export default function InstellingenScreen() {
     if (canGoNext) setSchoolYear(SCHOOL_YEAR_OPTIONS[currentIdx + 1]);
   };
 
+  const settingsContent = (
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={[
+        styles.content,
+        isLandscape && styles.contentLandscape,
+        { backgroundColor: colors.background },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
+      {isLandscape && (
+        <View style={styles.landscapePageHeader}>
+          <Text style={[styles.landscapePageTitle, { color: colors.text }]}>
+            Instellingen
+          </Text>
+          <Text style={[styles.landscapePageSub, { color: colors.muted }]}>
+            Pas je voorkeuren aan
+          </Text>
+        </View>
+      )}
+
+      <Text style={[styles.sectionLabel, { color: colors.sectionLabel }]}>
+        REGIO
+      </Text>
+
+      <View style={[styles.row, { backgroundColor: colors.card }]}>
+        <Text style={[styles.rowLabel, { color: colors.text }]}>
+          Huidige regio
+        </Text>
+        <View style={styles.rowRight}>
+          <Text style={[styles.rowValue, { color: colors.muted }]}>
+            {REGIO_LABEL[regio]}
+          </Text>
+          <ChevronRight />
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={[
+          styles.gpsButton,
+          { backgroundColor: colors.primary },
+          gpsLoading && { opacity: 0.7 },
+        ]}
+        onPress={handleGps}
+        activeOpacity={0.85}
+        disabled={gpsLoading}
+      >
+        {gpsLoading
+          ? <ActivityIndicator size="small" color="#fff" />
+          : (
+            <Text style={styles.gpsIcon}>
+              <MapPin color="#ff160c" />
+            </Text>
+          )}
+        <Text style={styles.gpsLabel}>
+          {gpsLoading ? "Locatie bepalen…" : "Gebruik GPS-locatie"}
+        </Text>
+      </TouchableOpacity>
+
+      {gpsError && <Text style={styles.errorText}>{gpsError}</Text>}
+
+      <View
+        style={[styles.segmentWrapper, { backgroundColor: colors.card }]}
+      >
+        {REGIO_OPTIONS.map((r) => (
+          <TouchableOpacity
+            key={r}
+            style={[
+              styles.segmentButton,
+              regio === r && { backgroundColor: colors.primary },
+            ]}
+            onPress={() => setRegio(r)}
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[
+                styles.segmentLabel,
+                { color: regio === r ? "#fff" : colors.text },
+              ]}
+            >
+              {REGIO_LABEL[r]}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Text style={[styles.sectionLabel, { color: colors.sectionLabel }]}>
+        SCHOOLJAAR
+      </Text>
+
+      <View
+        style={[styles.yearPickerRow, { backgroundColor: colors.card }]}
+      >
+        <TouchableOpacity
+          style={[
+            styles.yearArrowBtn,
+            !canGoPrev && styles.yearArrowDisabled,
+          ]}
+          onPress={goPrev}
+          disabled={!canGoPrev}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+        >
+          <Text
+            style={[
+              styles.yearArrow,
+              { color: canGoPrev ? colors.primary : colors.muted },
+            ]}
+          >
+            ‹
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.yearLabelWrapper}>
+          <Text style={[styles.yearLabel, { color: colors.text }]}>
+            {schoolYear}
+          </Text>
+          {schoolYear === buildCurrentSchoolYear() && (
+            <View
+              style={[
+                styles.currentBadge,
+                { backgroundColor: colors.primaryLight },
+              ]}
+            >
+              <Text
+                style={[styles.currentBadgeText, { color: colors.primary }]}
+              >
+                huidig
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.yearArrowBtn,
+            !canGoNext && styles.yearArrowDisabled,
+          ]}
+          onPress={goNext}
+          disabled={!canGoNext}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+        >
+          <Text
+            style={[
+              styles.yearArrow,
+              { color: canGoNext ? colors.primary : colors.muted },
+            ]}
+          >
+            ›
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={[styles.sectionLabel, { color: colors.sectionLabel }]}>
+        WEERGAVE
+      </Text>
+      <View style={[styles.row, { backgroundColor: colors.card }]}>
+        <Text style={[styles.rowLabel, { color: colors.text }]}>
+          Donkere modus
+        </Text>
+        <Switch
+          value={darkMode}
+          onValueChange={setDarkMode}
+          trackColor={{ false: "#767577", true: colors.primary }}
+          thumbColor="#fff"
+          ios_backgroundColor="#3e3e3e"
+        />
+      </View>
+    </ScrollView>
+  );
+
+  if (isLandscape) {
+    return (
+      <SafeAreaView
+        style={[styles.safeArea, styles.safeAreaLandscape, {
+          backgroundColor: colors.background,
+        }]}
+      >
+        <StatusBar
+          barStyle={darkMode ? "light-content" : "dark-content"}
+          backgroundColor={colors.background}
+        />
+        <SideNavBar />
+        <ScrollView>
+          {settingsContent}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.background }]}
@@ -114,169 +317,10 @@ export default function InstellingenScreen() {
         barStyle={darkMode ? "light-content" : "dark-content"}
         backgroundColor={colors.background}
       />
-
-      <View style={[styles.content, { backgroundColor: colors.background }]}>
-        <Text style={[styles.sectionLabel, { color: colors.sectionLabel }]}>
-          REGIO
-        </Text>
-
-        <View style={[styles.row, { backgroundColor: colors.card }]}>
-          <Text style={[styles.rowLabel, { color: colors.text }]}>
-            Huidige regio
-          </Text>
-          <View style={styles.rowRight}>
-            <Text style={[styles.rowValue, { color: colors.muted }]}>
-              {REGIO_LABEL[regio]}
-            </Text>
-            <ChevronRight />
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.gpsButton,
-            { backgroundColor: colors.primary },
-            gpsLoading && { opacity: 0.7 },
-          ]}
-          onPress={handleGps}
-          activeOpacity={0.85}
-          disabled={gpsLoading}
-        >
-          {gpsLoading
-            ? <ActivityIndicator size="small" color="#fff" />
-            : (
-              <Text style={styles.gpsIcon}>
-                <MapPin color="#ff160c" />
-              </Text>
-            )}
-          <Text style={styles.gpsLabel}>
-            {gpsLoading ? "Locatie bepalen…" : "Gebruik GPS-locatie"}
-          </Text>
-        </TouchableOpacity>
-
-        {gpsError && <Text style={styles.errorText}>{gpsError}</Text>}
-
-        <View
-          style={[styles.segmentWrapper, { backgroundColor: colors.card }]}
-        >
-          {REGIO_OPTIONS.map((r) => (
-            <TouchableOpacity
-              key={r}
-              style={[
-                styles.segmentButton,
-                regio === r && { backgroundColor: colors.primary },
-              ]}
-              onPress={() => setRegio(r)}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.segmentLabel,
-                  { color: regio === r ? "#fff" : colors.text },
-                ]}
-              >
-                {REGIO_LABEL[r]}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={[styles.sectionLabel, { color: colors.sectionLabel }]}>
-          SCHOOLJAAR
-        </Text>
-
-        <View
-          style={[styles.yearPickerRow, { backgroundColor: colors.card }]}
-        >
-          <TouchableOpacity
-            style={[
-              styles.yearArrowBtn,
-              !canGoPrev && styles.yearArrowDisabled,
-            ]}
-            onPress={goPrev}
-            disabled={!canGoPrev}
-            activeOpacity={0.7}
-            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-          >
-            <Text
-              style={[
-                styles.yearArrow,
-                { color: canGoPrev ? colors.primary : colors.muted },
-              ]}
-            >
-              ‹
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.yearLabelWrapper}>
-            <Text style={[styles.yearLabel, { color: colors.text }]}>
-              {schoolYear}
-            </Text>
-            {schoolYear === buildCurrentSchoolYear() && (
-              <View
-                style={[
-                  styles.currentBadge,
-                  { backgroundColor: colors.primaryLight },
-                ]}
-              >
-                <Text
-                  style={[styles.currentBadgeText, { color: colors.primary }]}
-                >
-                  huidig
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <TouchableOpacity
-            style={[
-              styles.yearArrowBtn,
-              !canGoNext && styles.yearArrowDisabled,
-            ]}
-            onPress={goNext}
-            disabled={!canGoNext}
-            activeOpacity={0.7}
-            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-          >
-            <Text
-              style={[
-                styles.yearArrow,
-                { color: canGoNext ? colors.primary : colors.muted },
-              ]}
-            >
-              ›
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={[styles.sectionLabel, { color: colors.sectionLabel }]}>
-          WEERGAVE
-        </Text>
-        <View style={[styles.row, { backgroundColor: colors.card }]}>
-          <Text style={[styles.rowLabel, { color: colors.text }]}>
-            Donkere modus
-          </Text>
-          <Switch
-            value={darkMode}
-            onValueChange={setDarkMode}
-            trackColor={{ false: "#767577", true: colors.primary }}
-            thumbColor="#fff"
-            ios_backgroundColor="#3e3e3e"
-          />
-        </View>
-      </View>
-
+      {settingsContent}
       <BottomNavBar />
     </SafeAreaView>
   );
-}
-
-function buildCurrentSchoolYear(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  if (month >= 8) return `${year}-${year + 1}`;
-  return `${year - 1}-${year}`;
 }
 
 const darkColors = {
@@ -302,7 +346,24 @@ const lightColors = {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
+  safeAreaLandscape: { flexDirection: "row" },
   content: { flex: 1, paddingHorizontal: 16, paddingTop: 12 },
+  contentLandscape: { paddingTop: 8 },
+
+  landscapePageHeader: {
+    marginBottom: 4,
+    marginLeft: 4,
+  },
+  landscapePageTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    letterSpacing: -0.3,
+  },
+  landscapePageSub: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+
   sectionLabel: {
     fontSize: 12,
     fontWeight: "600",
@@ -357,9 +418,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 8,
   },
+
   segmentLabel: { fontSize: 14, fontWeight: "500" },
 
-  // Year picker
   yearPickerRow: {
     flexDirection: "row",
     alignItems: "center",

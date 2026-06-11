@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useAppContext } from "../Appcontext.tsx";
 
 type RegionEntry = {
   region: string;
@@ -23,7 +24,7 @@ type VacationByRegion = {
 
 type Props = {
   region?: string;
-  /** School year string, e.g. "2025-2026". Defaults to the current school year. */
+
   schoolYear?: string;
 };
 
@@ -35,15 +36,8 @@ function defaultSchoolYear(): string {
   return `${year - 1}-${year}`;
 }
 
-/**
- * Parse a "YYYY-MM-DD" string as LOCAL midnight.
- * The API returns dates as UTC (e.g. "2026-07-11" = 00:00 UTC = 02:00 NL),
- * which would cause Math.ceil to be off by 1 day. Parsing as local midnight
- * keeps day arithmetic consistent with what the user sees on their clock.
- */
 function parseLocalDate(dateStr: string): Date {
-  // The API sometimes returns "YYYY-MM-DDT00:00:00" — take only the date part.
-  const datePart = dateStr.slice(0, 10); // "YYYY-MM-DD"
+  const datePart = dateStr.slice(0, 10);
   const [y, m, d] = datePart.split("-").map(Number);
   return new Date(y, m - 1, d, 0, 0, 0, 0);
 }
@@ -72,15 +66,40 @@ async function getVacationsByRegion(
   );
 }
 
+const darkColors = {
+  card: "#2c2c2e",
+  cardBorder: "#3a3a3c",
+  naam: "#ffffff",
+  datums: "#8e8e93",
+  sectionLabel: "#636366",
+  badgePastBg: "#3a3a3c",
+  badgePastText: "#636366",
+  stipPast: "#555558",
+  emptyText: "#636366",
+};
+const lightColors = {
+  card: "#FFFFFF",
+  cardBorder: "#E2E5F0",
+  naam: "#1A1A2E",
+  datums: "#999",
+  sectionLabel: "#AAA",
+  badgePastBg: "#E5E7EB",
+  badgePastText: "#9CA3AF",
+  stipPast: "#BBB",
+  emptyText: "#AAA",
+};
+
 export default function VacationList({
   region = "noord",
   schoolYear,
 }: Props) {
   const [vacations, setVacations] = useState<VacationByRegion[]>([]);
   const resolvedYear = schoolYear ?? defaultSchoolYear();
+  const { darkMode } = useAppContext();
+  const c = darkMode ? darkColors : lightColors;
 
   useEffect(() => {
-    setVacations([]); // clear while fetching new year
+    setVacations([]);
     getVacationsByRegion([region, "heel Nederland"], resolvedYear).then(
       setVacations,
     );
@@ -89,8 +108,6 @@ export default function VacationList({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Use parseLocalDate so isPast and daysUntil are both anchored to local midnight,
-  // matching the Countdown screen's Math.ceil(ms / 86400000) logic.
   const isPast = (enddate: string) => parseLocalDate(enddate) < today;
 
   const getDaysUntil = (target: Date) =>
@@ -120,36 +137,36 @@ export default function VacationList({
     const startLocal = parseLocalDate(item.startdate);
     const endLocal = parseLocalDate(item.enddate);
     return (
-      <View key={i} style={[styles.kaart, isItemPast && styles.kaartVoorbij]}>
+      <View
+        key={i}
+        style={[
+          styles.kaart,
+          { backgroundColor: c.card, borderColor: c.cardBorder },
+          isItemPast && styles.kaartVoorbij,
+        ]}
+      >
         <View
           style={[styles.stip, {
-            backgroundColor: isItemPast ? "#BBB" : "#F59E0B",
+            backgroundColor: isItemPast ? c.stipPast : "#F59E0B",
           }]}
         />
         <View style={styles.kaartInfo}>
-          <Text
-            style={[styles.kaartNaam, isItemPast && styles.kaartNaamVoorbij]}
-          >
+          <Text style={[styles.kaartNaam, { color: c.naam }]}>
             {item.type}
           </Text>
-          <Text
-            style={[
-              styles.kaartDatums,
-              isItemPast && styles.kaartDatumsVoorbij,
-            ]}
-          >
+          <Text style={[styles.kaartDatums, { color: c.datums }]}>
             {startLocal.toLocaleDateString("nl-NL")} –{" "}
             {endLocal.toLocaleDateString("nl-NL")}
           </Text>
           <View
             style={[
               styles.dagenBadge,
-              { backgroundColor: isItemPast ? "#E5E7EB" : "#F59E0B" },
+              { backgroundColor: isItemPast ? c.badgePastBg : "#F59E0B" },
             ]}
           >
             <Text
               style={[styles.dagenTekst, {
-                color: isItemPast ? "#9CA3AF" : "#DCFCE7",
+                color: isItemPast ? c.badgePastText : "#DCFCE7",
               }]}
             >
               {isItemPast
@@ -165,12 +182,16 @@ export default function VacationList({
   return (
     <View style={styles.container}>
       {upcoming.length === 0 && past.length === 0 && (
-        <Text style={styles.emptyText}>Geen vakanties gevonden.</Text>
+        <Text style={[styles.emptyText, { color: c.emptyText }]}>
+          Geen vakanties gevonden.
+        </Text>
       )}
       {upcoming.map((item, i) => renderCard(item, i))}
       {past.length > 0 && (
         <>
-          <Text style={styles.sectieLabel}>VOORBIJ</Text>
+          <Text style={[styles.sectieLabel, { color: c.sectionLabel }]}>
+            VOORBIJ
+          </Text>
           {past.map((item, i) => renderCard(item, i + upcoming.length))}
         </>
       )}
@@ -182,38 +203,32 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   emptyText: {
     textAlign: "center",
-    color: "#AAA",
     marginTop: 24,
     fontSize: 14,
   },
   sectieLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#AAA",
     letterSpacing: 1,
     paddingHorizontal: 4,
     paddingTop: 12,
     paddingBottom: 10,
   },
   kaart: {
-    backgroundColor: "#FFFFFF",
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 0.5,
-    borderColor: "#E2E5F0",
     gap: 12,
     marginBottom: 8,
   },
   kaartVoorbij: { opacity: 0.45 },
   stip: { width: 11, height: 11, borderRadius: 6, flexShrink: 0 },
   kaartInfo: { flex: 1 },
-  kaartNaam: { fontSize: 15, fontWeight: "600", color: "#1A1A2E" },
-  kaartNaamVoorbij: { color: "#888" },
-  kaartDatums: { fontSize: 12, color: "#999", marginTop: 2 },
-  kaartDatumsVoorbij: { color: "#BBB" },
+  kaartNaam: { fontSize: 15, fontWeight: "600" },
+  kaartDatums: { fontSize: 12, marginTop: 2 },
   dagenBadge: {
     alignSelf: "flex-start",
     borderRadius: 20,

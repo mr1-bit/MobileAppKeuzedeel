@@ -16,6 +16,8 @@ import {
 } from "react-native";
 import { useAppContext } from "../Appcontext.tsx";
 import BottomNavBar from "../components/BottomNavbar.tsx";
+import SideNavBar from "../components/SideNavbar.tsx";
+import { useOrientation } from "../orientation.ts";
 
 interface Holiday {
   id: string;
@@ -295,6 +297,8 @@ function getColors(darkMode: boolean) {
 export default function CountdownScreen() {
   const { regio, darkMode, schoolYear } = useAppContext();
   const colors = getColors(darkMode);
+  const orientation = useOrientation();
+  const isLandscape = orientation === "landscape";
 
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loadingHolidays, setLoadingHolidays] = useState(true);
@@ -368,19 +372,22 @@ export default function CountdownScreen() {
   if (loadingHolidays) {
     return (
       <SafeAreaView
-        style={[styles.safe, { backgroundColor: colors.background }]}
+        style={[styles.safe, isLandscape && styles.safeLandscape, {
+          backgroundColor: colors.background,
+        }]}
       >
         <StatusBar
           barStyle={darkMode ? "light-content" : "dark-content"}
           backgroundColor={colors.background}
         />
-        <View style={styles.loadingContainer}>
+        {isLandscape && <SideNavBar />}
+        <View style={[styles.loadingContainer, { flex: 1 }]}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.muted }]}>
             Vakanties laden…
           </Text>
         </View>
-        <BottomNavBar />
+        {!isLandscape && <BottomNavBar />}
       </SafeAreaView>
     );
   }
@@ -388,25 +395,291 @@ export default function CountdownScreen() {
   if (!selected) {
     return (
       <SafeAreaView
-        style={[styles.safe, { backgroundColor: colors.background }]}
+        style={[styles.safe, isLandscape && styles.safeLandscape, {
+          backgroundColor: colors.background,
+        }]}
       >
         <StatusBar
           barStyle={darkMode ? "light-content" : "dark-content"}
           backgroundColor={colors.background}
         />
-        <View style={styles.loadingContainer}>
+        {isLandscape && <SideNavBar />}
+        <View style={[styles.loadingContainer, { flex: 1 }]}>
           <Text style={{ fontSize: 40 }}>🎉</Text>
           <Text style={[styles.loadingText, { color: colors.muted }]}>
             Geen aankomende vakanties gevonden.
           </Text>
         </View>
-        <BottomNavBar />
+        {!isLandscape && <BottomNavBar />}
       </SafeAreaView>
     );
   }
 
   const vacationImage = imageForType(selected.name);
 
+  // ── Landscape layout ──────────────────────────────────────────────────────
+  if (isLandscape) {
+    return (
+      <SafeAreaView
+        style={[styles.safe, styles.safeLandscape, {
+          backgroundColor: colors.background,
+        }]}
+      >
+        <StatusBar
+          barStyle={darkMode ? "light-content" : "dark-content"}
+          backgroundColor={colors.background}
+        />
+
+        <SideNavBar />
+
+        <View style={styles.landscapeContent}>
+          {/* Compact header row */}
+          <View style={styles.header}>
+            <View>
+              <Text style={[styles.headerTitle, { color: colors.primary }]}>
+                Countdown
+              </Text>
+              <Text style={[styles.headerSub, { color: colors.muted }]}>
+                {isOngoing
+                  ? "Je bent op vakantie! 🎉"
+                  : `Schooljaar ${schoolYear.replace("-", "–")}`}
+              </Text>
+            </View>
+            <View
+              style={[styles.regionBadge, { backgroundColor: colors.primary }]}
+            >
+              <Text style={styles.regionBadgeText}>
+                {REGIO_LABEL[regio] ?? regio}
+              </Text>
+            </View>
+          </View>
+
+          {/* Two-column body */}
+          <View style={styles.landscapeBody}>
+            {/* Left col: image + name card */}
+            <View style={styles.landscapeLeft}>
+              {vacationImage && (
+                <Animated.View
+                  style={[
+                    styles.imageCard,
+                    styles.imageCardLandscape,
+                    { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
+                  ]}
+                >
+                  <Image
+                    source={vacationImage}
+                    style={styles.vacationImageLandscape}
+                    resizeMode="cover"
+                  />
+                </Animated.View>
+              )}
+
+              <Animated.View
+                style={[
+                  styles.nameCard,
+                  {
+                    backgroundColor: colors.card,
+                    opacity: fadeAnim,
+                    transform: [{ scale: scaleAnim }],
+                  },
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.nameCardInner}
+                  onPress={() => setModalVisible(true)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.nameCardEmoji}>{selected.emoji}</Text>
+                  <View style={styles.nameCardText}>
+                    <Text style={[styles.holidayName, { color: colors.text }]}>
+                      {selected.name}
+                    </Text>
+                    <Text
+                      style={[styles.holidayDates, { color: colors.muted }]}
+                    >
+                      {formatDate(selected.startDate)} –{" "}
+                      {formatDate(selected.endDate)}
+                    </Text>
+                  </View>
+                  <View
+                    style={[styles.swapBadge, {
+                      backgroundColor: colors.primaryLight,
+                    }]}
+                  >
+                    <Text
+                      style={[styles.swapBadgeText, { color: colors.primary }]}
+                    >
+                      wissel
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            </View>
+
+            {/* Right col: countdown + stats */}
+            <ScrollView
+              style={styles.landscapeRight}
+              contentContainerStyle={styles.landscapeRightContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <Animated.View
+                style={[
+                  styles.countdownCard,
+                  { backgroundColor: colors.card, opacity: fadeAnim },
+                ]}
+              >
+                {isOngoing
+                  ? (
+                    <View style={styles.ongoingContainer}>
+                      <Text style={styles.ongoingEmoji}>🎉</Text>
+                      <Text
+                        style={[styles.ongoingTitle, { color: colors.primary }]}
+                      >
+                        Je bent op vakantie!
+                      </Text>
+                      <Text
+                        style={[styles.ongoingDates, { color: colors.muted }]}
+                      >
+                        t/m {formatDate(selected.endDate)}
+                      </Text>
+                    </View>
+                  )
+                  : (
+                    <>
+                      <Text
+                        style={[styles.countdownLabel, { color: colors.muted }]}
+                      >
+                        nog
+                      </Text>
+                      <Text
+                        style={[styles.countdownNumber, {
+                          color: colors.countdownNum,
+                        }]}
+                      >
+                        {days}
+                      </Text>
+                      <Text
+                        style={[styles.countdownDagen, { color: colors.muted }]}
+                      >
+                        {days === 1 ? "dag" : "dagen"}
+                      </Text>
+                      <View
+                        style={[styles.timerRow, {
+                          backgroundColor: colors.timerBg,
+                        }]}
+                      >
+                        <View style={styles.timerUnit}>
+                          <Text
+                            style={[styles.timerNum, {
+                              color: colors.timerText,
+                            }]}
+                          >
+                            {pad2(hours)}
+                          </Text>
+                          <Text
+                            style={[styles.timerLabel, { color: colors.muted }]}
+                          >
+                            uur
+                          </Text>
+                        </View>
+                        <Text
+                          style={[styles.timerColon, { color: colors.muted }]}
+                        >
+                          :
+                        </Text>
+                        <View style={styles.timerUnit}>
+                          <Text
+                            style={[styles.timerNum, {
+                              color: colors.timerText,
+                            }]}
+                          >
+                            {pad2(minutes)}
+                          </Text>
+                          <Text
+                            style={[styles.timerLabel, { color: colors.muted }]}
+                          >
+                            min
+                          </Text>
+                        </View>
+                        <Text
+                          style={[styles.timerColon, { color: colors.muted }]}
+                        >
+                          :
+                        </Text>
+                        <View style={styles.timerUnit}>
+                          <Text
+                            style={[styles.timerNum, {
+                              color: colors.timerText,
+                            }]}
+                          >
+                            {pad2(seconds)}
+                          </Text>
+                          <Text
+                            style={[styles.timerLabel, { color: colors.muted }]}
+                          >
+                            sec
+                          </Text>
+                        </View>
+                      </View>
+                    </>
+                  )}
+              </Animated.View>
+
+              {!isOngoing && (
+                <Animated.View style={[styles.statsRow, { opacity: fadeAnim }]}>
+                  <View
+                    style={[styles.statCard, { backgroundColor: colors.card }]}
+                  >
+                    <Text style={[styles.statNumber, { color: colors.text }]}>
+                      {Math.floor(days / 7)}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.muted }]}>
+                      weken
+                    </Text>
+                  </View>
+                  <View
+                    style={[styles.statCard, { backgroundColor: colors.card }]}
+                  >
+                    <Text style={[styles.statNumber, { color: colors.text }]}>
+                      {days % 7}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.muted }]}>
+                      rest dagen
+                    </Text>
+                  </View>
+                  <View
+                    style={[styles.statCard, { backgroundColor: colors.card }]}
+                  >
+                    <Text style={[styles.statNumber, { color: colors.text }]}>
+                      {Math.round(
+                        (selected.endDate.getTime() -
+                          selected.startDate.getTime()) /
+                          86400000,
+                      )}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.muted }]}>
+                      vakantiedagen
+                    </Text>
+                  </View>
+                </Animated.View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+
+        <SwapModal
+          visible={modalVisible}
+          holidays={holidays}
+          current={selected}
+          onSelect={handleSelect}
+          onClose={() => setModalVisible(false)}
+          colors={colors}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // ── Portrait layout (unchanged) ───────────────────────────────────────────
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <StatusBar
@@ -621,6 +894,25 @@ export default function CountdownScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  safeLandscape: { flexDirection: "row" },
+
+  landscapeContent: { flex: 1, flexDirection: "column" },
+  landscapeBody: {
+    flex: 1,
+    flexDirection: "row",
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    gap: 12,
+  },
+  landscapeLeft: {
+    width: "42%",
+    gap: 10,
+  },
+  landscapeRight: { flex: 1 },
+  landscapeRightContent: {
+    gap: 12,
+    paddingBottom: 12,
+  },
 
   loadingContainer: {
     flex: 1,
@@ -707,9 +999,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
+  imageCardLandscape: {},
   vacationImage: {
     width: "100%",
     height: 160,
+  },
+  vacationImageLandscape: {
+    width: "100%",
+    height: 120,
   },
 
   countdownCard: {
@@ -745,7 +1042,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // hh:mm:ss timer
   timerRow: {
     flexDirection: "row",
     alignItems: "center",

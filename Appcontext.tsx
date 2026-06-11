@@ -53,7 +53,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
   const [loading, setLoading] = useState(true);
 
-  // Restore from storage on mount
   useEffect(() => {
     (async () => {
       try {

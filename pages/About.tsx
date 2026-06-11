@@ -12,6 +12,8 @@ import {
 } from "react-native";
 import { useAppContext } from "../Appcontext.tsx";
 import BottomNavBar from "../components/BottomNavbar.tsx";
+import SideNavBar from "../components/SideNavbar.tsx";
+import { useOrientation } from "../orientation.ts";
 
 const APP_VERSION = "1.0.0";
 const SCHOOL_NAME = "Deltion College";
@@ -25,10 +27,230 @@ export default function AboutScreen() {
   const { darkMode, schoolYear: contextSchoolYear } = useAppContext();
   const schoolYear = contextSchoolYear;
   const colors = darkMode ? darkColors : lightColors;
+  const orientation = useOrientation();
+  const isLandscape = orientation === "landscape";
+
   const SOURCE_URL =
     `https://www.rijksoverheid.nl/themas/onderwijs/schoolvakanties/overzicht-schoolvakanties-per-schooljaar/overzicht-schoolvakanties-${schoolYear}`;
 
   const displayYear = schoolYear ? schoolYear.replace("-", "–") : "2025–2026";
+
+  const scrollContent = (
+    <ScrollView
+      contentContainerStyle={[
+        styles.scroll,
+        isLandscape && styles.scrollLandscape,
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
+      <View
+        style={[styles.pageHeader, isLandscape && styles.pageHeaderLandscape]}
+      >
+        <View>
+          <Text style={[styles.pageTitle, { color: colors.text }]}>
+            About
+          </Text>
+          <Text style={[styles.pageSubtitle, { color: colors.muted }]}>
+            Over de app &amp; ontwikkelaar
+          </Text>
+        </View>
+      </View>
+
+      {isLandscape
+        ? (
+          <View style={styles.landscapeTopRow}>
+            <View
+              style={[styles.profileCard, styles.profileCardLandscape, {
+                backgroundColor: colors.card,
+              }]}
+            >
+              <View
+                style={[styles.avatarRing, {
+                  borderColor: colors.primary + "40",
+                }]}
+              >
+                <View
+                  style={[styles.avatar, { backgroundColor: colors.avatarBg }]}
+                >
+                  <Image
+                    source={AVATAR_IMAGE}
+                    style={styles.avatarImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              </View>
+              <Text style={[styles.profileName, { color: colors.text }]}>
+                {STUDENT_NAME}
+              </Text>
+              <Text style={[styles.profileRole, { color: colors.muted }]}>
+                {STUDENT_ROLE}
+              </Text>
+            </View>
+
+            <View
+              style={[styles.section, styles.sectionLandscapeFlex, {
+                backgroundColor: colors.card,
+              }]}
+            >
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Over de app
+              </Text>
+              <Text style={[styles.sectionBody, { color: colors.muted }]}>
+                {APP_DESCRIPTION}
+              </Text>
+              <View style={styles.statsRow}>
+                <View
+                  style={[
+                    styles.statCell,
+                    styles.statCellLeft,
+                    { borderColor: colors.border },
+                  ]}
+                >
+                  <Text style={[styles.statLabel, { color: colors.muted }]}>
+                    Versie
+                  </Text>
+                  <Text style={[styles.statValue, { color: colors.text }]}>
+                    {APP_VERSION}
+                  </Text>
+                </View>
+                <View style={styles.statCell}>
+                  <Text style={[styles.statLabel, { color: colors.muted }]}>
+                    Schooljaar
+                  </Text>
+                  <Text style={[styles.statValue, { color: colors.text }]}>
+                    {displayYear}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )
+        : (
+          <>
+            <View
+              style={[styles.profileCard, { backgroundColor: colors.card }]}
+            >
+              <View
+                style={[styles.avatarRing, {
+                  borderColor: colors.primary + "40",
+                }]}
+              >
+                <View
+                  style={[styles.avatar, { backgroundColor: colors.avatarBg }]}
+                >
+                  <Image
+                    source={AVATAR_IMAGE}
+                    style={styles.avatarImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              </View>
+              <Text style={[styles.profileName, { color: colors.text }]}>
+                {STUDENT_NAME}
+              </Text>
+              <Text style={[styles.profileRole, { color: colors.muted }]}>
+                {STUDENT_ROLE}
+              </Text>
+            </View>
+
+            <View style={[styles.section, { backgroundColor: colors.card }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Over de app
+              </Text>
+              <Text style={[styles.sectionBody, { color: colors.muted }]}>
+                {APP_DESCRIPTION}
+              </Text>
+              <View style={styles.statsRow}>
+                <View
+                  style={[
+                    styles.statCell,
+                    styles.statCellLeft,
+                    { borderColor: colors.border },
+                  ]}
+                >
+                  <Text style={[styles.statLabel, { color: colors.muted }]}>
+                    Versie
+                  </Text>
+                  <Text style={[styles.statValue, { color: colors.text }]}>
+                    {APP_VERSION}
+                  </Text>
+                </View>
+                <View style={styles.statCell}>
+                  <Text style={[styles.statLabel, { color: colors.muted }]}>
+                    Schooljaar
+                  </Text>
+                  <Text style={[styles.statValue, { color: colors.text }]}>
+                    {displayYear}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </>
+        )}
+
+      <View style={[styles.section, { backgroundColor: colors.card }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Databron
+        </Text>
+        <TouchableOpacity
+          style={styles.linkRow}
+          activeOpacity={0.7}
+          onPress={() => Linking.openURL(`${SOURCE_URL}`)}
+        >
+          <Text style={styles.linkIcon}>🏛️</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.linkLabel, { color: colors.text }]}>
+              Rijksoverheid data bron
+            </Text>
+            <Text style={[styles.linkSub, { color: colors.muted }]}>
+              https://www.rijksoverheid.nl/themas/onderwijs/schoolvakanties/~
+            </Text>
+          </View>
+          <Text style={[styles.chevron, { color: colors.muted }]}>›</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.section, { backgroundColor: colors.card }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          School
+        </Text>
+        <View style={styles.linkRow}>
+          <Text style={styles.linkIcon}>🏫</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.linkLabel, { color: colors.text }]}>
+              {SCHOOL_NAME}
+            </Text>
+            <Text style={[styles.linkSub, { color: colors.muted }]}>
+              Zwolle
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <Text style={[styles.footer, { color: colors.faint }]}>
+        Deltion vakantie app · v{APP_VERSION}
+      </Text>
+    </ScrollView>
+  );
+
+  if (isLandscape) {
+    return (
+      <SafeAreaView
+        style={[styles.safe, styles.safeLandscape, {
+          backgroundColor: colors.background,
+        }]}
+      >
+        <StatusBar
+          barStyle={darkMode ? "light-content" : "dark-content"}
+          backgroundColor={colors.background}
+        />
+        <SideNavBar />
+        <View style={styles.landscapeMainContent}>
+          {scrollContent}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
@@ -36,127 +258,7 @@ export default function AboutScreen() {
         barStyle={darkMode ? "light-content" : "dark-content"}
         backgroundColor={colors.background}
       />
-
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.pageHeader}>
-          <View>
-            <Text style={[styles.pageTitle, { color: colors.text }]}>
-              About
-            </Text>
-            <Text style={[styles.pageSubtitle, { color: colors.muted }]}>
-              Over de app &amp; ontwikkelaar
-            </Text>
-          </View>
-          <View
-            style={[styles.regionBadge, { backgroundColor: colors.primary }]}
-          >
-            <Text style={styles.regionBadgeText}>📍 Noord</Text>
-          </View>
-        </View>
-
-        <View style={[styles.profileCard, { backgroundColor: colors.card }]}>
-          {/* Avatar */}
-          <View
-            style={[styles.avatarRing, { borderColor: colors.primary + "40" }]}
-          >
-            <View style={[styles.avatar, { backgroundColor: colors.avatarBg }]}>
-              <Image
-                source={AVATAR_IMAGE}
-                style={styles.avatarImage}
-                resizeMode="cover"
-              />
-            </View>
-          </View>
-
-          <Text style={[styles.profileName, { color: colors.text }]}>
-            {STUDENT_NAME}
-          </Text>
-          <Text style={[styles.profileRole, { color: colors.muted }]}>
-            {STUDENT_ROLE}
-          </Text>
-        </View>
-
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Over de app
-          </Text>
-          <Text style={[styles.sectionBody, { color: colors.muted }]}>
-            {APP_DESCRIPTION}
-          </Text>
-
-          <View style={styles.statsRow}>
-            <View
-              style={[
-                styles.statCell,
-                styles.statCellLeft,
-                { borderColor: colors.border },
-              ]}
-            >
-              <Text style={[styles.statLabel, { color: colors.muted }]}>
-                Versie
-              </Text>
-              <Text style={[styles.statValue, { color: colors.text }]}>
-                {APP_VERSION}
-              </Text>
-            </View>
-            <View style={styles.statCell}>
-              <Text style={[styles.statLabel, { color: colors.muted }]}>
-                Schooljaar
-              </Text>
-              <Text style={[styles.statValue, { color: colors.text }]}>
-                {displayYear}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Databron
-          </Text>
-          <TouchableOpacity
-            style={styles.linkRow}
-            activeOpacity={0.7}
-            onPress={() => Linking.openURL(`${SOURCE_URL}`)}
-          >
-            <Text style={styles.linkIcon}>🏛️</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.linkLabel, { color: colors.text }]}>
-                Rijksoverheid data bron
-              </Text>
-              <Text style={[styles.linkSub, { color: colors.muted }]}>
-                https://www.rijksoverheid.nl/themas/onderwijs/schoolvakanties/~
-              </Text>
-            </View>
-            <Text style={[styles.chevron, { color: colors.muted }]}>›</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            School
-          </Text>
-          <View style={styles.linkRow}>
-            <Text style={styles.linkIcon}>🏫</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.linkLabel, { color: colors.text }]}>
-                {SCHOOL_NAME}
-              </Text>
-              <Text style={[styles.linkSub, { color: colors.muted }]}>
-                Zwolle
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <Text style={[styles.footer, { color: colors.faint }]}>
-          Deltion vakantie app · v{APP_VERSION}
-        </Text>
-      </ScrollView>
-
+      {scrollContent}
       <BottomNavBar />
     </SafeAreaView>
   );
@@ -186,11 +288,17 @@ const darkColors = {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  safeLandscape: { flexDirection: "row" },
+  landscapeMainContent: { flex: 1 },
+
   scroll: {
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 24,
     gap: 12,
+  },
+  scrollLandscape: {
+    paddingTop: 8,
   },
 
   pageHeader: {
@@ -198,6 +306,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 4,
+  },
+  pageHeaderLandscape: {
+    marginBottom: 8,
   },
   pageTitle: {
     fontSize: 26,
@@ -220,6 +331,20 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  // Landscape: profile + about side by side
+  landscapeTopRow: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "stretch",
+  },
+  profileCardLandscape: {
+    width: 160,
+    flexShrink: 0,
+  },
+  sectionLandscapeFlex: {
+    flex: 1,
+  },
+
   profileCard: {
     borderRadius: 20,
     paddingVertical: 28,
@@ -233,7 +358,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  // Ring sits outside — just the border, no overflow hidden needed
   avatarRing: {
     width: 112,
     height: 112,
@@ -244,7 +368,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  // Avatar is the colored circle behind the image
   avatar: {
     width: 100,
     height: 100,
@@ -256,7 +379,6 @@ const styles = StyleSheet.create({
 
   avatarIcon: { fontSize: 48 },
 
-  // Image is explicitly sized smaller than the avatar container
   avatarImage: {
     width: 100,
     height: 100,
@@ -267,10 +389,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     letterSpacing: -0.2,
+    textAlign: "center",
   },
   profileRole: {
     fontSize: 13,
     marginTop: 1,
+    textAlign: "center",
   },
 
   section: {
